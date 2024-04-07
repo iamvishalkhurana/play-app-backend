@@ -9,8 +9,6 @@ import mongoose from "mongoose";
 import nodemailer from "nodemailer";
 import { sendMail } from "../utils/sendMail.js";
 
-import passport from "../utils/googleLogin.js";
-
 const generateTokens = async (userId) => {
   try {
     const user = await User.findById(userId);
