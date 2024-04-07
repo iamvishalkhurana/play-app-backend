@@ -29,6 +29,9 @@ router.route("/register").post(
 
 router.route("/login").post(loginUser);
 
+// router.route("/google-login").get(googleLogin);
+// router.route("/google/callback").get(afterGoogleLogin);
+
 //secured routes
 
 router.route("/logout").post(verifyJWT, logoutUser);

@@ -6,12 +6,13 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 
 const toggleVideoLike = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
+
   if (!isValidObjectId(videoId)) {
     throw new ApiError(400, "Invalid videoId");
   }
 
-  const isLiked = await Like.find({
-    video: videoId,
+  const isLiked = await Like.findOne({
+    video: new mongoose.Types.ObjectId(videoId),
     likedBy: req.user?._id,
   });
 
@@ -22,7 +23,7 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
       throw new ApiError(500, "Error occured while unliking the video");
     }
     return res
-      .send(200)
+      .status(200)
       .json(new ApiResponse(200, isDeleted, "Video unliked successfully"));
   } else {
     const newLike = await Like.create({
@@ -34,7 +35,7 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
       throw new ApiError(500, "Error occured while liking the video");
     }
     return res
-      .send(200)
+      .status(200)
       .json(new ApiResponse(200, newLike, "Video liked successfully"));
   }
 });
@@ -46,8 +47,8 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid commentId");
   }
 
-  const isLiked = await Like.find({
-    comment: commentId,
+  const isLiked = await Like.findOne({
+    comment: new mongoose.Types.ObjectId(commentId),
     likedBy: req.user?._id,
   });
 
@@ -58,7 +59,7 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
       throw new ApiError(500, "Error occured while unliking the comment");
     }
     return res
-      .send(200)
+      .status(200)
       .json(new ApiResponse(200, isDeleted, "Comment unliked successfully"));
   } else {
     const newLike = await Like.create({
@@ -70,7 +71,7 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
       throw new ApiError(500, "Error occured while liking the comment");
     }
     return res
-      .send(200)
+      .status(200)
       .json(new ApiResponse(200, newLike, "Comment liked successfully"));
   }
 });
@@ -82,8 +83,8 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
   if (!isValidObjectId(tweetId)) {
     throw new ApiError(400, "Invalid tweetId");
   }
-  const isLiked = await Like.find({
-    tweet: tweetId,
+  const isLiked = await Like.findOne({
+    tweet: new mongoose.Types.ObjectId(tweetId),
     likedBy: req.user?._id,
   });
 
@@ -94,7 +95,7 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
       throw new ApiError(500, "Error occured while unliking the tweet");
     }
     return res
-      .send(200)
+      .status(200)
       .json(new ApiResponse(200, isDeleted, "Tweet unliked successfully"));
   } else {
     const newLike = await Like.create({
@@ -106,7 +107,7 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
       throw new ApiError(500, "Error occured while liking the tweet");
     }
     return res
-      .send(200)
+      .status(200)
       .json(new ApiResponse(200, newLike, "Tweet liked successfully"));
   }
 });
@@ -124,41 +125,38 @@ const getLikedVideos = asyncHandler(async (req, res) => {
         from: "videos",
         localField: "video",
         foreignField: "_id",
-        as: "LikedVideo",
+        as: "likedVideo",
         pipeline: [
           {
             $lookup: {
               from: "users",
               localField: "owner",
               foreignField: "_id",
-              as: "ownerDetails",
+              as: "owner",
             },
           },
           {
-            $unwind: "$ownerDetails",
+            $unwind: "$owner",
           },
         ],
       },
     },
     {
-      $unwind: "$LikedVideo",
+      $unwind: "$likedVideo",
     },
-
     {
       $project: {
-        _id: 0,
         likedVideo: {
           _id: 1,
           videoFile: 1,
           thumbnail: 1,
-          owner: 1,
           title: 1,
           description: 1,
-          views: 1,
-          duration: 1,
           createdAt: 1,
-          isPublished: 1,
-          ownerDetails: {
+          duration: 1,
+          views: 1,
+          owner: {
+            _id: 1,
             username: 1,
             fullName: 1,
             avatar: 1,

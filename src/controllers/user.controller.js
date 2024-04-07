@@ -6,6 +6,10 @@ import { User } from "../models/user.model.js";
 import { Video } from "../models/video.model.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import nodemailer from "nodemailer";
+import { sendMail } from "../utils/sendMail.js";
+
+import passport from "../utils/googleLogin.js";
 
 const generateTokens = async (userId) => {
   try {
@@ -19,6 +23,7 @@ const generateTokens = async (userId) => {
     throw new ApiError(500, "Something went wrong while generating tokens");
   }
 };
+
 const registerUser = asyncHandler(async (req, res) => {
   //Steps
   //data from frontend
@@ -55,6 +60,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
   //get files from frontend .files is added by multer middleware
   const avatarLocalPath = req.files?.avatar[0]?.path;
+  console.log(avatarLocalPath);
   // const coverImageLocalPath = req.files?.coverImage[0]?.path;
   let coverImageLocalPath;
   if (
@@ -72,6 +78,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
   const avatar = await uploadOnCloudinary(avatarLocalPath);
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+  console.log(avatar);
 
   if (!avatar) {
     throw new ApiError(400, "Avatar file is required");
@@ -94,14 +101,23 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Something went wrong while registering the user");
   }
 
+  const mailData = {
+    email: email,
+    subject: "Verification email",
+    content: `<p>Hii ${fullName}.<br />
+      Please click <a href="http://localhost:5000/api/v1/auth/verify-mail?id=${user._id}">here</a> to verify your email.
+    </p>`,
+  };
+  const message = await sendMail(mailData);
+
   return res
-    .status(201)
+    .status(200)
     .json(new ApiResponse(200, userEntry, "User Registered Successfully"));
 });
 
 const loginUser = asyncHandler(async (req, res) => {
   const { username, email, password } = req.body;
-
+  console.log(username, email);
   if (!username && !email) {
     throw new ApiError(400, "Username or email is required");
   }
@@ -192,6 +208,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     }
 
     const user = await User.findById(decodedToken._id);
+    console.log(user);
 
     if (incomingRefreshToken !== user?.refreshToken) {
       throw new ApiError(400, "Refresh token is expired or used");
@@ -440,7 +457,57 @@ const getWatchHistory = asyncHandler(async (req, res) => {
     );
 });
 
+const verifyMail = asyncHandler(async (req, res) => {
+  try {
+    if (req.query.id === undefined) {
+      return res.send("404 page not found");
+    }
+
+    const user = await User.findOne({ _id: req.query.id });
+
+    if (!user) {
+      res.send("User Not found");
+    } else {
+      user.isVerified = 1;
+      await user.save({ validateBeforeSave: false });
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(200, { verified: true }, "Verified Successfully")
+        );
+    }
+  } catch (error) {
+    res.send("404 user not found");
+  }
+});
+const deliverMail = asyncHandler(async (req, res) => {
+  try {
+    const id = req.query.id;
+    const mailData = {
+      email: email,
+      subject: "Verification email",
+      content: `<p>Hii ${fullName}.<br />
+      Please click <a href="http://localhost:5000/api/v1/auth/verify-mail?id=${id}">here</a> to verify your email.
+    </p>`,
+    };
+    const message = await sendMail(mailData);
+    return res.status(200).json(message);
+  } catch (error) {
+    throw new ApiError(400, error);
+  }
+});
+
+// const googleLogin = asyncHandler(async (req, res) => {
+//   passport.authenticate("google", { scope: ["email", "profile"] })(req, res);
+// });
+
+// const afterGoogleLogin = passport.authenticate("google", {
+//   successRedirect: "http://localhost:5173/",
+//   failureRedirect: "/api/v1/auth/failure",
+// });
+
 export {
+  verifyMail,
   registerUser,
   loginUser,
   logoutUser,
@@ -452,4 +519,5 @@ export {
   updateCoverImage,
   getUserChannelDetails,
   getWatchHistory,
+  deliverMail,
 };

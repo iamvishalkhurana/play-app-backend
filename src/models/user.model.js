@@ -34,6 +34,10 @@ const userSchema = Schema(
       type: String,
       required: [true, "Password is required"],
     },
+    isVerified: {
+      type: Boolean,
+      default: 0,
+    },
     watchHistory: [
       {
         type: Schema.Types.ObjectId,

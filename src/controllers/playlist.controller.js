@@ -77,15 +77,23 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
   }
 
   const video = await Video.findById(videoId);
+  console.log(video);
+
   if (!video) {
     throw new ApiError(400, "Video does not exist");
   }
 
-  const playlist = await Playlist.findByIdAndUpdate(playlistId, {
-    $push: {
-      videos: video,
+  const playlist = await Playlist.findByIdAndUpdate(
+    playlistId,
+    {
+      $push: {
+        videos: videoId,
+      },
     },
-  });
+    {
+      new: true,
+    }
+  );
 
   if (!playlist) {
     throw new ApiError(500, "Error occured while adding video to playlist");
@@ -103,11 +111,17 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid playlist or video");
   }
 
-  const playlist = await Playlist.findByIdAndUpdate(playlistId, {
-    $pull: {
-      videos: { _id: videoId },
+  const playlist = await Playlist.findByIdAndUpdate(
+    playlistId,
+    {
+      $pull: {
+        videos: videoId,
+      },
     },
-  });
+    {
+      new: true,
+    }
+  );
 
   if (!playlist) {
     throw new ApiError(500, "Error occured while deleting video from playlist");
@@ -120,12 +134,13 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
 const deletePlaylist = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
   // TODO: delete playlist
-  if (!isValidObjectId(playlistId)) {
+  if (!playlistId) {
     throw new ApiError(400, "Invalid playlist");
   }
 
   const isDeleted = await Playlist.findByIdAndDelete(playlistId);
-  if (!isDeleted.acknowledged) {
+
+  if (!isDeleted) {
     throw new ApiError(400, "Error occured while deleting playlist");
   }
 
@@ -146,12 +161,18 @@ const updatePlaylist = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Name is required");
   }
 
-  const updatedPlaylist = await Playlist.findByIdAndUpdate(playlistId, {
-    $set: {
-      name: name,
-      description: description,
+  const updatedPlaylist = await Playlist.findByIdAndUpdate(
+    playlistId,
+    {
+      $set: {
+        name: name,
+        description: description,
+      },
     },
-  });
+    {
+      new: true,
+    }
+  );
 
   if (!updatedPlaylist) {
     throw new ApiError(400, "Error occured while updating playlist");

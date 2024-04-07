@@ -9,15 +9,16 @@ import { Like } from "../models/like.model.js";
 import { parse } from "dotenv";
 
 const getVideoComments = asyncHandler(async (req, res) => {
-  //TODO: get all comments for a video
   const { videoId } = req.params;
   const { page = 1, limit = 10 } = req.query;
 
-  if (!isValidObjectId(videoId)) {
-    throw new ApiError(400, "Invalid video id");
+  const video = await Video.findById(videoId);
+
+  if (!video) {
+    throw new ApiError(404, "Video not found");
   }
 
-  const commentsAggregate = await Comment.aggregate([
+  const commentsAggregate = Comment.aggregate([
     {
       $match: {
         video: new mongoose.Types.ObjectId(videoId),
@@ -41,7 +42,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
     },
     {
       $addFields: {
-        likes: {
+        likesCount: {
           $size: "$likes",
         },
         owner: {
@@ -76,9 +77,6 @@ const getVideoComments = asyncHandler(async (req, res) => {
     },
   ]);
 
-  if (!commentsAggregate) {
-    throw new ApiError(500, "Error occured in fetching comments");
-  }
   const options = {
     page: parseInt(page, 10),
     limit: parseInt(limit, 10),
@@ -86,15 +84,10 @@ const getVideoComments = asyncHandler(async (req, res) => {
 
   const comments = await Comment.aggregatePaginate(commentsAggregate, options);
 
-  if (!comments) {
-    throw new ApiError(500, "Error occured while applying pagination");
-  }
-
   return res
     .status(200)
     .json(new ApiResponse(200, comments, "Comments fetched successfully"));
 });
-
 const addComment = asyncHandler(async (req, res) => {
   // TODO: add a comment to a video
   const { content } = req.body;
@@ -169,7 +162,7 @@ const deleteComment = asyncHandler(async (req, res) => {
   }
   const isDeleted = await Comment.findByIdAndDelete(commentId);
 
-  if (!isDeleted.acknowledged) {
+  if (!isDeleted) {
     throw new ApiError(500, "Error occured while deleting comment");
   }
 

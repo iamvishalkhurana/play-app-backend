@@ -18,7 +18,8 @@ const uploadOnCloudinary = async (localFilePath) => {
       localFilePath,
       { resource_type: "auto" },
       function (error, result) {
-        console.log(result);
+        if (error) console.log(error);
+        else console.log(result);
       }
     );
 
